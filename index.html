@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>moniKos 💸</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* beberapa tambahan css biar makin ciamik & interaktif */
+        .category-grid .cat-box {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .category-grid .cat-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .filter-arsip-box {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+        .filter-arsip-box select {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+            background: #fff;
+            outline: none;
+        }
+        .history-kategori-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0 0 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .history-kategori-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px id #edf2f7;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- header dengan watermark di paling atas -->
+        <header class="header">
+            <div class="web-watermark-top">
+                <p>web ini dibuat oleh <strong>wister agripson</strong> ♡</p>
+            </div>
+            
+            <h1>moniKos<span id="displayNama">.</span></h1>
+            <p id="deskripsiFun">haloo! selamat datang di moniKos (Money Kos) ✨ tempat rahasia buat ngatur alokasi keuangan kamu, apalagi khusus nya buat kamu si anak kos biar gak boncos dan selamat dari mode promag di akhir bulan! mari kita pantau cuanmu 💸🚀</p>
+            <button class="btn-reset-saldo" style="margin-top: 10px; background: #edf2f7;" onclick="gantiNamaPanggilan()">✏️ ganti nama</button>
+        </header>
+
+        <!-- section saldo utama -->
+        <section class="main-balance-card">
+            <p class="balance-label">sisa uang belanja kamu</p>
+            <h2 id="sisaUang">rp 0</h2>
+            <button class="btn-reset-saldo" onclick="resetSaldoAwal()">🔄 reset saldo awal</button>
+            
+            <div class="setup-saldo" style="margin-top: 15px;">
+                <input type="number" id="saldoAwal" placeholder="set saldo awal bulan...">
+                <button onclick="setSaldo()">simpan</button>
+            </div>
+        </section>
+
+        <!-- Pilihan Bulan Aktif / Arsip Masa Lalu -->
+        <div class="filter-arsip-box">
+            <label style="font-size: 0.85rem; font-weight: 600; color: #4a5568;">📅 lihat periode:</label>
+            <select id="selectPeriode" onchange="gantiPeriodeTampilan()">
+                <!-- di-generate otomatis via js -->
+            </select>
+        </div>
+
+        <!-- grid alokasi / kategori (Bisa diklik sekarang!) -->
+        <section class="category-grid">
+            <div class="cat-box belanja" onclick="bukaDetailKategori('belanja', '🛒 belanja')"><span>🛒</span><p>belanja</p><small id="stat-belanja">rp 0</small></div>
+            <div class="cat-box makan" onclick="bukaDetailKategori('makan', '🍔 makan & minum')"><span>🍔</span><p>makan</p><small id="stat-makan">rp 0</small></div>
+            <div class="cat-box darurat" onclick="bukaDetailKategori('darurat', '🚨 dana darurat')"><span>🚨</span><p>darurat</p><small id="stat-darurat">rp 0</small></div>
+            <div class="cat-box reward" onclick="bukaDetailKategori('reward', '🎀 self reward')"><span>🎀</span><p>reward</p><small id="stat-reward">rp 0</small></div>
+            <div class="cat-box tabungan" onclick="bukaDetailKategori('tabungan', '🐷 khusus tabungan')"><span>🐷</span><p>tabungan</p><small id="stat-tabungan">rp 0</small></div>
+        </section>
+
+        <!-- tombol rangkuman bulanan -->
+        <button class="btn-summary-trigger" onclick="bukaRangkuman()">📊 lihat rangkuman bulan ini yuk! </button>
+
+        <!-- form input transaksi -->
+        <section class="card input-card">
+            <h3>input pengeluaran baru ✨</h3>
+            <div class="form-group"><input type="text" id="namaItem" placeholder="beli apa hari ini?" autocomplete="off"></div>
+            <div class="form-row">
+                <input type="number" id="nominalItem" placeholder="nominal (rp)...">
+                <select id="kategoriItem">
+                    <option value="belanja">🛒 belanja</option>
+                    <option value="makan">🍔 makan & minum</option>
+                    <option value="darurat">🚨 dana darurat</option>
+                    <option value="reward">🎀 self reward</option>
+                    <option value="tabungan">🐷 khusus tabungan</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="tambahCatatan()">tambah transaksi</button>
+        </section>
+
+        <!-- riwayat pengeluaran keseluruhan -->
+        <section class="card history-card">
+            <h3>riwayat pengeluaran 📜</h3>
+            <ul id="listRiwayat" class="history-list">
+                <li class="empty-state">belum ada pengeluaran. hemat pol!</li>
+            </ul>
+        </section>
+    </div>
+
+    <!-- Kotak Pop-up Rangkuman Bulanan -->
+    <div id="modalRangkuman" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="judulRangkuman">rangkuman bulan ini 🌟</h3>
+                <button class="close-modal" onclick="tutupRangkuman()">×</button>
+            </div>
+            <div id="isiRangkuman"></div>
+        </div>
+    </div>
+
+    <!-- Kotak Pop-up Detail Kategori -->
+    <div id="modalKategori" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="judulKategori">detail kategori</h3>
+                <button class="close-modal" onclick="tutupKategori()">×</button>
+            </div>
+            <div id="isiKategori">
+                <!-- info di-generate via js -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logika Database Baru: Mendukung Arsip per Bulan-Tahun
+        let masterKos = {
+            namaUser: "",
+            periodeAktif: "", // format "YYYY-MM"
+            bulanan: {} // wadah menyimpan { "2026-06": { saldoAwal, pengeluaran, riwayat } }
+        };
+
+        const namaBulanLengkap = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+        let periodeYangDilihat = "";
+
+        window.onload = function() {
+            const sekarang = new Date();
+            const keyBulanIni = `${sekarang.getFullYear()}-${String(sekarang.getMonth() + 1).padStart(2, '0')}`;
+            masterKos.periodeAktif = keyBulanIni;
+            periodeYangDilihat = keyBulanIni;
+
+            const localData = localStorage.getItem('monikos_master_data');
+            if (localData) {
+                masterKos = JSON.parse(localData);
+                // Sinkronisasi kalau masuk bulan baru secara otomatis
+                masterKos.periodeAktif = keyBulanIni;
+            }
+
+            // Inisialisasi struktur bulan berjalan jika belum ada
+            initDataBulan(keyBulanIni);
+            
+            if (!masterKos.namaUser || masterKos.namaUser.trim() === "") { 
+                gantiNamaPanggilan(); 
+            } else { 
+                buatOpsiPeriode();
+                updateTampilan(); 
+            }
+        }
+
+        function initDataBulan(keyBulan) {
+            if (!masterKos.bulanan[keyBulan]) {
+                masterKos.bulanan[keyBulan] = {
+                    saldoAwal: 0,
+                    pengeluaran: { belanja: 0, makan: 0, darurat: 0, reward: 0, tabungan: 0 },
+                    riwayat: []
+                };
+            }
+        }
+
+        function buatOpsiPeriode() {
+            const select = document.getElementById('selectPeriode');
+            select.innerHTML = "";
+            
+            // Urutkan key dari yang terbaru
+            const keys = Object.keys(masterKos.bulanan).sort().reverse();
+            keys.forEach(key => {
+                const [thn, bln] = key.split('-');
+                const namaBln = namaBulanLengkap[parseInt(bln) - 1];
+                const option = document.createElement('option');
+                option.value = key;
+                option.innerText = `${namaBln} ${thn}`;
+                if (key === masterKos.periodeAktif) option.innerText += " (bulan ini)";
+                select.appendChild(option);
+            });
+            select.value = periodeYangDilihat;
+        }
+
+        function gantiPeriodeTampilan() {
+            periodeYangDilihat = document.getElementById('selectPeriode').value;
+            updateTampilan();
+        }
+
+        function gantiNamaPanggilan() {
+            let namaInput = prompt("halo! masukkan nama panggilan/nickname kamu dulu yaaa ✨:", masterKos.namaUser || "");
+            if (namaInput === null) return;
+            masterKos.namaUser = namaInput.trim() === "" ? "" : namaInput.trim();
+            simpanKeLocalStorage();
+            buatOpsiPeriode();
+            updateTampilan();
+        }
+
+        function setSaldo() {
+            const inputSaldo = document.getElementById('saldoAwal').value;
+            if (inputSaldo === '' || inputSaldo < 0) { alert('isi nominal saldo awal yang bener dulu yaaa cantiik/ganteng ✨'); return; }
+            
+            // Saldo awal selalu disimpan di bulan aktif saat ini
+            initDataBulan(masterKos.periodeAktif);
+            masterKos.bulanan[masterKos.periodeAktif].saldoAwal = parseInt(inputSaldo);
+            
+            simpanKeLocalStorage();
+            periodeYangDilihat = masterKos.periodeAktif;
+            buatOpsiPeriode();
+            updateTampilan();
+            document.getElementById('saldoAwal').value = '';
+        }
+
+        function resetSaldoAwal() {
+            const pilihan = confirm("yakin mau RESET data di periode yang sedang dilihat ini kembali ke rp 0?");
+            if (pilihan) {
+                masterKos.bulanan[periodeYangDilihat] = {
+                    saldoAwal: 0,
+                    pengeluaran: { belanja: 0, makan: 0, darurat: 0, reward: 0, tabungan: 0 },
+                    riwayat: []
+                };
+                alert("data periode ini udah dibersihkan yaaa! ✨");
+                simpanKeLocalStorage();
+                updateTampilan();
+            }
+        }
+
+        function tambahCatatan() {
+            // Pengeluaran baru otomatis dipaksa masuk ke bulan berjalan saat ini
+            const keyBulan = masterKos.periodeAktif;
+            initDataBulan(keyBulan);
+
+            const namaItem = document.getElementById('namaItem').value;
+            const nominalItem = document.getElementById('nominalItem').value;
+            const kategoriItem = document.getElementById('kategoriItem').value;
+
+            if (namaItem === '' || nominalItem === '' || nominalItem <= 0) { alert('aduh, isi nama barang ama nominalnya dulu yang bener yaaa! 📑'); return; }
+            
+            const nominal = parseInt(nominalItem);
+            const sekarang = new Date();
+
+            masterKos.bulanan[keyBulan].pengeluaran[kategoriItem] += nominal;
+            masterKos.bulanan[keyBulan].riwayat.unshift({
+                id: Date.now(),
+                nama: namaItem,
+                nominal: nominal,
+                kategori: kategoriItem,
+                waktuDisplay: sekarang.toLocaleDateString('id-ID', { day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            });
+
+            document.getElementById('namaItem').value = '';
+            document.getElementById('nominalItem').value = '';
+
+            // Kembalikan pandangan user ke bulan sekarang biar keliatan updatenya
+            periodeYangDilihat = keyBulan;
+            simpanKeLocalStorage();
+            buatOpsiPeriode();
+            updateTampilan();
+        }
+
+        function hapusTransaksi(idItem, nominal, kategori) {
+            if (confirm('yakin mau hapus transaksi ini dari riwayat? 😢')) {
+                masterKos.bulanan[periodeYangDilihat].pengeluaran[kategori] -= nominal;
+                masterKos.bulanan[periodeYangDilihat].riwayat = masterKos.bulanan[periodeYangDilihat].riwayat.filter(item => item.id !== idItem);
+                simpanKeLocalStorage();
+                updateTampilan();
+                
+                // Kalau modal kategori lagi kebuka, segarkan isinya juga
+                if(document.getElementById('modalKategori').classList.contains('active')) {
+                    const judul = document.getElementById('judulKategori').innerText;
+                    bukaDetailKategori(kategori, judul);
+                }
+            }
+        }
+
+        function updateTampilan() {
+            const dataTampil = masterKos.bulanan[periodeYangDilihat] || { saldoAwal: 0, pengeluaran: { belanja: 0, makan: 0, darurat: 0, reward: 0, tabungan: 0 }, riwayat: [] };
+
+            // Update nama di header & deskripsi
+            if (masterKos.namaUser && masterKos.namaUser !== "") {
+                document.getElementById('displayNama').innerText = " " + masterKos.namaUser.toLowerCase() + ".";
+                document.getElementById('deskripsiFun').innerHTML = `haloo <strong>${masterKos.namaUser.toLowerCase()}</strong>! selamat datang di <strong>moniKos</strong> (Money Kos) ✨ tempat rahasia buat ngatur alokasi keuangan kamu, apalagi khusus nya buat kamu si anak kos biar gak boncos dan selamat dari mode promag di akhir bulan! mari kita pantau cuanmu 💸🚀`;
+            } else {
+                document.getElementById('displayNama').innerText = ".";
+                document.getElementById('deskripsiFun').innerHTML = `haloo! selamat datang di <strong>moniKos</strong> (Money Kos) ✨ tempat rahasia buat ngatur alokasi keuangan kamu, apalagi khusus nya buat kamu si anak kos biar gak boncos dan selamat dari mode promag di akhir bulan! mari kita pantau cuanmu 💸🚀`;
+            }
+
+            let totalPengeluaran = 0;
+            for (let kat in dataTampil.pengeluaran) { totalPengeluaran += dataTampil.pengeluaran[kat]; }
+            
+            const sisa = dataTampil.saldoAwal - totalPengeluaran;
+            document.getElementById('sisaUang').innerText = 'rp ' + sisa.toLocaleString('id-ID');
+
+            document.getElementById('stat-belanja').innerText = 'rp ' + dataTampil.pengeluaran.belanja.toLocaleString('id-ID');
+            document.getElementById('stat-makan').innerText = 'rp ' + dataTampil.pengeluaran.makan.toLocaleString('id-ID');
+            document.getElementById('stat-darurat').innerText = 'rp ' + dataTampil.pengeluaran.darurat.toLocaleString('id-ID');
+            document.getElementById('stat-reward').innerText = 'rp ' + dataTampil.pengeluaran.reward.toLocaleString('id-ID');
+            document.getElementById('stat-tabungan').innerText = 'rp ' + dataTampil.pengeluaran.tabungan.toLocaleString('id-ID');
+
+            // Set judul tombol rangkuman sesuai periode terpilih
+            const [thn, bln] = periodeYangDilihat.split('-');
+            const namaBln = namaBulanLengkap[parseInt(bln) - 1];
+            document.querySelector('.btn-summary-trigger').innerText = `📊 lihat rangkuman bulan ${namaBln}`;
+
+            const listRiwayat = document.getElementById('listRiwayat');
+            if (!dataTampil.riwayat || dataTampil.riwayat.length === 0) {
+                listRiwayat.innerHTML = '<li class="empty-state">belum ada pengeluaran di periode ini.</li>';
+            } else {
+                listRiwayat.innerHTML = '';
+                dataTampil.riwayat.forEach(item => {
+                    let emoji = '💸';
+                    if(item.kategori === 'belanja') emoji = '🛒';
+                    if(item.kategori === 'makan') emoji = '🍔';
+                    if(item.kategori === 'darurat') emoji = '🚨';
+                    if(item.kategori === 'reward') emoji = '🎀';
+                    if(item.kategori === 'tabungan') emoji = '🐷';
+
+                    listRiwayat.innerHTML += `
+                        <li>
+                            <div class="item-info">
+                                <strong>${emoji} ${item.nama}</strong>
+                                <small>${item.waktuDisplay}</small>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <span class="item-price">- rp ${item.nominal.toLocaleString('id-ID')}</span>
+                                <button class="btn-delete" onclick="hapusTransaksi(${item.id}, ${item.nominal}, '${item.kategori}')">hapus</button>
+                            </div>
+                        </li>`;
+                });
+            }
+        }
+
+        // FUNGSI BARU: Buka detail barang per kategori saat kotak diklik
+        function bukaDetailKategori(kategori, labelKategori) {
+            const dataTampil = masterKos.bulanan[periodeYangDilihat];
+            const listFilter = dataTampil.riwayat.filter(item => item.kategori === kategori);
+            
+            const [thn, bln] = periodeYangDilihat.split('-');
+            const namaBln = namaBulanLengkap[parseInt(bln) - 1];
+
+            document.getElementById('judulKategori').innerText = `${labelKategori} (${namaBln})`;
+            
+            let htmlIsi = `<p style="font-size:0.85rem; color:var(--text-muted);">total alokasi keluar: <strong>rp ${dataTampil.pengeluaran[kategori].toLocaleString('id-ID')}</strong></p>`;
+            
+            if(listFilter.length === 0) {
+                htmlIsi += `<p class="empty-state" style="margin-top:15px;">tidak ada catatan pengeluaran di kategori ini.</p>`;
+            } else {
+                htmlIsi += `<ul class="history-kategori-list">`;
+                listFilter.forEach(item => {
+                    htmlIsi += `
+                        <li>
+                            <div>
+                                <span style="font-weight:600;">${item.nama}</span><br>
+                                <small style="color:gray; font-size:0.75rem;">${item.waktuDisplay}</small>
+                            </div>
+                            <span style="color:#e63946; font-weight:600;">- rp ${item.nominal.toLocaleString('id-ID')}</span>
+                        </li>`;
+                });
+                htmlIsi += `</ul>`;
+            }
+            
+            document.getElementById('isiKategori').innerHTML = htmlKonten = htmlIsi;
+            document.getElementById('modalKategori').classList.add('active');
+        }
+
+        function tutupKategori() { document.getElementById('modalKategori').classList.remove('active'); }
+
+        // Buka Rangkuman Dinamis Sesuai Bulan Yang Sedang Dipilih/Dilihat
+        function bukaRangkuman() {
+            const [thn, bln] = periodeYangDilihat.split('-');
+            const namaBln = namaBulanLengkap[parseInt(bln) - 1];
+            const dataTampil = masterKos.bulanan[periodeYangDilihat];
+            
+            let totalPengeluaran = 0;
+            for (let kat in dataTampil.pengeluaran) { totalPengeluaran += dataTampil.pengeluaran[kat]; }
+
+            const sisa = dataTampil.saldoAwal - totalPengeluaran;
+            let bgSaldoAkhir = sisa < 0 ? '#ffd6e0' : (sisa === 0 && dataTampil.saldoAwal > 0 ? '#fefae0' : '#d8f3dc');
+            let teksMotivasi = sisa < 0 ? '"aduh gawat keuanganmu minus! kurangi self reward dan mode hemat dimulai! 🚨😭"' : (sisa === 0 && dataTampil.saldoAwal > 0 ? '"dompet kamu pas-pasan banget, awas besok makan promag wkwk 🍟"' : '"yeay saldo mu sisa, bisa ditabung nih! mantap kerennn 🐷🌟"');
+            
+            let htmlKonten = `
+                <div class="summary-line"><span>💰 total saldo awal</span><strong>rp ${dataTampil.saldoAwal.toLocaleString('id-ID')}</strong></div>
+                <div style="margin: 15px 0 5px 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">rincian pengeluaran:</div>
+                <div class="summary-line"><span>🛒 belanja</span><span>rp ${dataTampil.pengeluaran.belanja.toLocaleString('id-ID')}</span></div>
+                <div class="summary-line"><span>🍔 makan & minum</span><span>rp ${dataTampil.pengeluaran.makan.toLocaleString('id-ID')}</span></div>
+                <div class="summary-line"><span>🚨 dana darurat</span><span>rp ${dataTampil.pengeluaran.darurat.toLocaleString('id-ID')}</span></div>
+                <div class="summary-line"><span>🎀 self reward</span><span>rp ${dataTampil.pengeluaran.reward.toLocaleString('id-ID')}</span></div>
+                <div class="summary-line"><span>🐷 khusus tabungan</span><span>rp ${dataTampil.pengeluaran.tabungan.toLocaleString('id-ID')}</span></div>
+                <div class="summary-line" style="margin-top: 10px; font-weight: 600;"><span>💸 total keluar</span><span style="color: #e63946;">rp ${totalPengeluaran.toLocaleString('id-ID')}</span></div>
+                <div class="summary-total-box" style="background-color: ${bgSaldoAkhir}; margin-top:15px; padding:15px; border-radius:14px; font-weight:700;"><span style="font-size: 0.85rem; display: block; font-weight: 500; color: #4a5568;">total saldo akhir</span><span style="font-size: 1.3rem;">rp ${sisa.toLocaleString('id-ID')}</span></div>
+                <p class="motivation-text" style="font-size: 0.85rem; color: #4a5568; margin-top: 10px; font-style: italic; text-align: center;">${teksMotivasi}</p>`;
+            
+            document.getElementById('judulRangkuman').innerText = `rangkuman ${namaBln} ${thn} 📊`;
+            document.getElementById('isiRangkuman').innerHTML = htmlKonten;
+            document.getElementById('modalRangkuman').classList.add('active');
+        }
+
+        function tutupRangkuman() { document.getElementById('modalRangkuman').classList.remove('active'); }
+        function simpanKeLocalStorage() { localStorage.setItem('monikos_master_data', JSON.stringify(masterKos)); }
+    </script>
+</body>
+</html>
